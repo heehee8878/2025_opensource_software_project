@@ -10,4 +10,4 @@
  - PyQt5
 
 ### ⚙️ 사용 api
-- Cerebras Cloud (Ollama 4.4 70B)
+- Cerebras Cloud (Llama-3.3-70B)
