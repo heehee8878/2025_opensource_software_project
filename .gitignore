@@ -1,0 +1,8 @@
+# python cache files
+__pycache__
+
+# macOS system files
+.DS_Store
+
+# test project files
+/test_project
