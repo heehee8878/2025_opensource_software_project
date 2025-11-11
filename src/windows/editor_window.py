@@ -28,6 +28,11 @@ class EditorWindow(QMainWindow, form_class):
         self.filename_label.setText("Untitled")
         self.file_list.clear()
         self.file_list.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        # Hotkeys
+        self.actionOpen.setShortcut("Ctrl+O")
+        self.actionSave.setShortcut("Ctrl+S")
+        self.actionExit.setShortcut("Ctrl+Q")
         
         # 터미널 초기 메시지
         self.terminal_output.setPlainText("터미널이 준비되었습니다. 폴더를 열면 해당 디렉토리에서 시작됩니다.\n")
