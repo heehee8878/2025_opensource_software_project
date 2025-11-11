@@ -24,19 +24,23 @@ class FileManager:
                 key = os.path.normpath(os.path.join(rel if rel != '.' else '', dir))
                 if parent is None:
                     dir_item = QTreeWidgetItem(file_list_widget)
-                    dir_item.setText(0, dir)
+                    dir_item.setText(0, f"📁 {dir}")
+                    dir_item.setData(0, 1, dir)
                 else:
                     dir_item = QTreeWidgetItem(parent)
-                    dir_item.setText(0, dir)
+                    dir_item.setText(0, f"📁 {dir}")
+                    dir_item.setData(0, 1, dir)
                 self.item_map[key] = dir_item
 
             for file in files:
                 if parent is None:
                     file_item = QTreeWidgetItem(file_list_widget)
                     file_item.setText(0, file)
+                    file_item.setData(0, 1, file)
                 else:
                     file_item = QTreeWidgetItem(parent)
                     file_item.setText(0, file)
+                    file_item.setData(0, 1, file)
     
     def read_file(self, file_path):
         try:
@@ -57,7 +61,31 @@ class FileManager:
         path_parts = []
         current = item
         while current is not None:
-            path_parts.insert(0, current.text(0))
+            # 저장된 실제 이름 가져오기
+            actual_name = current.data(0, 1)
+            if actual_name:
+                path_parts.insert(0, actual_name)
             current = current.parent()
         
         return os.path.join(folder_path, *path_parts)
+    
+    def create_file(self, file_path):
+        """새 파일 생성"""
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write("")
+            return True, None
+        except Exception as e:
+            return False, str(e)
+    
+    def delete_item(self, item_path, is_directory):
+        """파일 또는 폴더 삭제"""
+        try:
+            if is_directory:
+                import shutil
+                shutil.rmtree(item_path)
+            else:
+                os.remove(item_path)
+            return True, None
+        except Exception as e:
+            return False, str(e)
