@@ -55,7 +55,7 @@ color: white;</string>
        </size>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="open_folder_page">
        <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -159,6 +159,11 @@ font-size: 10pt;</string>
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <family>Noto Sans KR</family>
+           </font>
           </property>
           <property name="styleSheet">
            <string notr="true">border: none;</string>
