@@ -1,7 +1,7 @@
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox
-from file_manager import FileManager
+from src.managers.file_manager import FileManager
 
 # Load UI file
 form_class = uic.loadUiType("./ui/editor.ui")[0]
