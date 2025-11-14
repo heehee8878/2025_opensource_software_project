@@ -21,11 +21,11 @@ class TerminalManager(QObject):
 
         self.process = QProcess()
         self.process.setWorkingDirectory(working_directory)
-
+        # 플랫폼별로 실행할 프로그램/인자 설정
         if os.name == 'nt':
-            # Windows: PowerShell
+            # Windows: PowerShell을 대화형으로 유지하려면 -NoExit 사용
             program = 'powershell'
-            args = ['-NoLogo']
+            args = ['-NoLogo', '-NoExit']
             self.process.setProgram(program)
             self.process.setArguments(args)
         else:
@@ -43,15 +43,16 @@ class TerminalManager(QObject):
                 self.process.setProgram(program)
                 self.process.setArguments(args)
 
-            # 표준 출력/에러 수신
-            self.process.readyReadStandardOutput.connect(self._on_stdout)
-            self.process.readyReadStandardError.connect(self._on_stderr)
-            self.process.finished.connect(self._on_finished)
-            self.process.errorOccurred.connect(self._on_error)
+        # 표준 출력/에러 수신 (모든 플랫폼에서 연결)
+        self.process.readyReadStandardOutput.connect(self._on_stdout)
+        self.process.readyReadStandardError.connect(self._on_stderr)
+        self.process.finished.connect(self._on_finished)
+        self.process.errorOccurred.connect(self._on_error)
 
-            self.process.start()
-            started = self.process.waitForStarted(3000)
-            self.is_running = started
+        # 프로세스 시작 및 시작 여부 확인
+        self.process.start()
+        started = self.process.waitForStarted(3000)
+        self.is_running = bool(started)
 
         if started:
             # 초기 PWD 동기화
