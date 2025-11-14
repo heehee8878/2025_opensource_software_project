@@ -31,6 +31,7 @@ class ModelManager:
         # 등록된 모델들: alias -> { provider, model }
         self.models: Dict[str, Dict[str, str]] = {
             'llama-3.3-70b': { 'provider': 'cerebras', 'model': 'llama-3.3-70b' },
+            'gpt-oss-120b': { 'provider': 'cerebras', 'model': 'gpt-oss-120b' },
         }
 
         self.default_model_alias: str = 'llama-3.3-70b'

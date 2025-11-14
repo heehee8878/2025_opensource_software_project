@@ -22,6 +22,9 @@ class EditorWindow(QMainWindow, form_class):
         self.terminal_manager = TerminalManager()
         self.model_manager = ModelManager()
         self.agent_manager = AgentManager(self.model_manager)
+
+        # 모델 콤보박스 초기화
+        self._populate_model_combobox()
         
         # global 상태 변수
         self.opened_folder_path = ""
@@ -59,6 +62,7 @@ class EditorWindow(QMainWindow, form_class):
         self.terminal_input.returnPressed.connect(self.execute_terminal_command)
         self.open_folder_button.clicked.connect(self.open_folder)
         self.agent_enterButton.clicked.connect(self.on_agent_generate)
+        self.modelName.currentTextChanged.connect(self._on_model_selected)
     
 
     """폴더 열기"""
@@ -238,6 +242,34 @@ class EditorWindow(QMainWindow, form_class):
         self.terminal_output.moveCursor(QTextCursor.End)
         self.terminal_output.insertPlainText(text)
         self.terminal_output.moveCursor(QTextCursor.End)
+
+    def _populate_model_combobox(self):
+        """ModelManager에 등록된 모델들을 `modelName` 콤보박스에 채웁니다."""
+        try:
+            self.modelName.clear()
+            # 모델 alias 목록을 추가
+            for alias in sorted(self.model_manager.models.keys()):
+                self.modelName.addItem(alias)
+
+            # 기본 모델 선택
+            default = getattr(self.model_manager, 'default_model_alias', None)
+            if default:
+                idx = self.modelName.findText(default)
+                if idx >= 0:
+                    self.modelName.setCurrentIndex(idx)
+        except Exception as e:
+            # UI에 오류 출력
+            self.append_terminal_output(f"모델 목록 로드 실패: {e}\n")
+
+    def _on_model_selected(self, alias: str):
+        """콤보박스 선택 변경 시 ModelManager의 기본 모델을 변경합니다."""
+        if not alias:
+            return
+        try:
+            self.model_manager.set_default_model(alias)
+            self.append_terminal_output(f"모델 선택: {alias}\n")
+        except Exception as e:
+            QMessageBox.warning(self, "모델 선택 오류", str(e))
 
     """에이전트 생성 실행"""
     def on_agent_generate(self):
