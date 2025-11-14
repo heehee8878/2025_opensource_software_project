@@ -34,7 +34,7 @@ class ModelManager:
             'gpt-oss-120b': { 'provider': 'cerebras', 'model': 'gpt-oss-120b' },
         }
 
-        self.default_model_alias: str = 'llama-3.3-70b'
+        self.default_model_alias: str = 'gpt-oss-120b'
 
     # ---------- public APIs ----------
     def register_model(self, alias: str, provider: str, model_name: str):

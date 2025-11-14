@@ -1,7 +1,6 @@
 import os
 import shutil
 import re
-import subprocess
 from PyQt5.QtCore import QObject, pyqtSignal, QProcess
 
 """터미널 프로세스 관리 클래스"""
@@ -123,22 +122,17 @@ class TerminalManager(QObject):
             self.process = None
         self.is_running = False
 
-    # --------- helpers ----------
     def _sanitize_output(self, text: str) -> str:
-        """
-        ANSI/OSC 이스케이프 시퀀스를 제거하고, 캐리지 리턴(\r)를 개행으로 정규화.
-        색상/스타일 제어 코드가 QTextEdit에 그대로 노출되는 것을 방지.
-        """
-        # Normalize carriage returns
+        """출력 세니타이징"""
+
+        # 캐리지 리턴 정규화
         text = text.replace('\r', '\n')
 
-        # Remove OSC sequences: ESC ] ... BEL or ESC ] ... ESC \
+        # OSC
         text = re.sub(r"\x1B\][^\x07]*(\x07|\x1b\\)", "", text)
-
-        # Remove CSI sequences: ESC [ ... letters
+        # CSI
         text = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "", text)
-
-        # Remove other ESC sequences like ESC ( B, etc.
+        # ESC
         text = re.sub(r"\x1B[()][0-2AB]", "", text)
 
         return text
