@@ -5,6 +5,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor
 from src.managers.file_manager import FileManager
 from src.managers.terminal_manager import TerminalManager
+from src.managers.model_manager import ModelManager
+from src.managers.agent_manager import AgentManager
 
 # Load UI file
 form_class = uic.loadUiType("./ui/editor.ui")[0]
@@ -18,6 +20,11 @@ class EditorWindow(QMainWindow, form_class):
         # Manager 초기화
         self.file_manager = FileManager()
         self.terminal_manager = TerminalManager()
+        self.model_manager = ModelManager()
+        self.agent_manager = AgentManager(self.model_manager)
+
+        # 모델 콤보박스 초기화
+        self._populate_model_combobox()
         
         # global 상태 변수
         self.opened_folder_path = ""
@@ -28,6 +35,11 @@ class EditorWindow(QMainWindow, form_class):
         self.filename_label.setText("Untitled")
         self.file_list.clear()
         self.file_list.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        # Hotkeys
+        self.actionOpen.setShortcut("Ctrl+O")
+        self.actionSave.setShortcut("Ctrl+S")
+        self.actionExit.setShortcut("Ctrl+Q")
         
         # 터미널 초기 메시지
         self.terminal_output.setPlainText("터미널이 준비되었습니다. 폴더를 열면 해당 디렉토리에서 시작됩니다.\n")
@@ -37,6 +49,8 @@ class EditorWindow(QMainWindow, form_class):
         
         # Connect events
         self._connect_events()
+        # 터미널 출력 스트림 연결
+        self.terminal_manager.output_received.connect(self.append_terminal_output)
     
     """이벤트 연결"""
     def _connect_events(self):
@@ -47,6 +61,8 @@ class EditorWindow(QMainWindow, form_class):
         self.file_list.customContextMenuRequested.connect(self.show_context_menu)
         self.terminal_input.returnPressed.connect(self.execute_terminal_command)
         self.open_folder_button.clicked.connect(self.open_folder)
+        self.agent_enterButton.clicked.connect(self.on_agent_generate)
+        self.modelName.currentTextChanged.connect(self._on_model_selected)
     
 
     """폴더 열기"""
@@ -216,12 +232,117 @@ class EditorWindow(QMainWindow, form_class):
         
         # else
         else:
-            success, output = self.terminal_manager.execute_command(command)
-            if output:
-                self.append_terminal_output(output + "\n")
+            # 지속형 셸에 명령/입력을 전달
+            success, msg = self.terminal_manager.execute_command(command)
+            if not success and msg:
+                self.append_terminal_output(msg + "\n")
     
     """터미널 출력에 텍스트 추가"""
     def append_terminal_output(self, text):
         self.terminal_output.moveCursor(QTextCursor.End)
         self.terminal_output.insertPlainText(text)
         self.terminal_output.moveCursor(QTextCursor.End)
+
+    def _populate_model_combobox(self):
+        """ModelManager에 등록된 모델들을 `modelName` 콤보박스에 채웁니다."""
+        try:
+            self.modelName.clear()
+            # 모델 alias 목록을 추가
+            for alias in sorted(self.model_manager.models.keys()):
+                self.modelName.addItem(alias)
+
+            # 기본 모델 선택
+            default = getattr(self.model_manager, 'default_model_alias', None)
+            if default:
+                idx = self.modelName.findText(default)
+                if idx >= 0:
+                    self.modelName.setCurrentIndex(idx)
+        except Exception as e:
+            # UI에 오류 출력
+            self.append_terminal_output(f"모델 목록 로드 실패: {e}\n")
+
+    def _on_model_selected(self, alias: str):
+        """콤보박스 선택 변경 시 ModelManager의 기본 모델을 변경합니다."""
+        if not alias:
+            return
+        try:
+            self.model_manager.set_default_model(alias)
+            self.append_terminal_output(f"모델 선택: {alias}\n")
+        except Exception as e:
+            QMessageBox.warning(self, "모델 선택 오류", str(e))
+
+    """에이전트 생성 실행"""
+    def on_agent_generate(self):
+        # 파일이 열려 있어야 함
+        if not self.opened_file_path:
+            QMessageBox.warning(self, "에이전트", "먼저 파일을 열어주세요.")
+            return
+
+        # 사용자 프롬프트와 현재 코드(수정 전/중)를 가져옴
+        user_prompt = self.agent_promptEdit.toPlainText().strip()
+        if not user_prompt:
+            QMessageBox.information(self, "에이전트", "프롬프트를 입력해주세요.")
+            return
+        
+        self.agent_promptEdit.clear()
+
+        current_code = self.code_input.toPlainText()
+
+        # 실행 중 표시
+        self.agent_enterButton.setEnabled(False)
+        self.agent_enterButton.setText("…")
+        self.agent_resultEdit.setPlainText("LLM 호출 중입니다…")
+        try:
+            ok, raw, extracted_code, extracted_desc = self.agent_manager.run(user_prompt, self.opened_file_path, current_code)
+        finally:
+            self.agent_enterButton.setEnabled(True)
+            self.agent_enterButton.setText("✦")
+
+        if not ok:
+            self.agent_resultEdit.setHtml(self._format_as_html(raw))
+            QMessageBox.critical(self, "에이전트 오류", raw)
+            return
+
+        # 설명 블록이 있으면 그걸 표시, 없으면 전체 응답 표시
+        if extracted_desc:
+            self.agent_resultEdit.setHtml(self._format_as_html(extracted_desc))
+        else:
+            self.agent_resultEdit.setHtml(self._format_as_html(raw))
+
+        # 포맷에 맞는 코드 추출 성공 시 코드 입력창에 반영
+        if extracted_code:
+            self.code_input.setPlainText(extracted_code)
+        else:
+            # 추출 실패 시 안내 유지
+            QMessageBox.information(self, "안내", "응답에서 수정된 코드를 추출하지 못했습니다. 우측 응답을 확인해주세요.")
+
+    def _format_as_html(self, text: str) -> str:
+        """마크다운 텍스트를 HTML로 변환"""
+        try:
+            import markdown
+            # 마크다운 확장 기능 포함 (테이블, 코드 하이라이트 등)
+            html_content = markdown.markdown(
+                text,
+                extensions=['extra', 'nl2br', 'sane_lists']
+            )
+            # 기본 스타일 적용
+            styled_html = f'''
+            <div style="color: #d4d4d4; font-family: 'Noto Sans KR', sans-serif; font-size: 11pt; line-height: 1.6;">
+                {html_content}
+            </div>
+            <style>
+                strong {{ color: #4ec9b0; font-weight: bold; }}
+                em {{ color: #ce9178; font-style: italic; }}
+                code {{ background-color: #1e1e1e; color: #d7ba7d; padding: 2px 4px; border-radius: 3px; font-family: 'Consolas', monospace; }}
+                h1, h2, h3 {{ color: #569cd6; }}
+                ul, ol {{ padding-left: 20px; }}
+                blockquote {{ border-left: 3px solid #569cd6; padding-left: 10px; margin-left: 0; color: #9cdcfe; }}
+            </style>
+            '''
+            return styled_html
+        except ImportError:
+            # markdown 라이브러리가 없으면 기본 HTML 처리
+            import html
+            escaped = html.escape(text)
+            formatted = escaped.replace('\n', '<br>')
+            return f'<div style="color: #d4d4d4; font-family: \'Noto Sans KR\', sans-serif; font-size: 11pt; line-height: 1.6;">{formatted}</div>'
