@@ -9,7 +9,7 @@
  - PyQt5
 
 ### ⚙️ 사용 api
-- Cerebras Cloud (Llama-3.3-70B)
+- Cerebras Cloud (llama-3.3-70B, gpt-oss-120b)
 
 ### 구조
 - **Editor Window**
