@@ -78,6 +78,14 @@ class FileManager:
         except Exception as e:
             return False, str(e)
     
+    def create_folder(self, folder_path):
+        """새 폴더 생성"""
+        try:
+            os.makedirs(folder_path, exist_ok=True)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
     def delete_item(self, item_path, is_directory):
         """파일 또는 폴더 삭제"""
         try:

@@ -64,7 +64,6 @@ class EditorWindow(QMainWindow, form_class):
         self.agent_enterButton.clicked.connect(self.on_agent_generate)
         self.modelName.currentTextChanged.connect(self._on_model_selected)
     
-
     """폴더 열기"""
     def open_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -135,6 +134,9 @@ class EditorWindow(QMainWindow, form_class):
             add_file_action = menu.addAction("파일 추가")
             add_file_action.triggered.connect(lambda: self.add_file_to_folder(item, file_path))
             menu.addSeparator()
+            add_folder_action = menu.addAction("폴더 추가")
+            add_folder_action.triggered.connect(lambda: self.create_folder_in_folder(item, file_path))
+            menu.addSeparator()
         
         delete_action = menu.addAction("삭제")
         delete_action.triggered.connect(lambda: self.delete_item(item, file_path, is_directory))
@@ -165,6 +167,30 @@ class EditorWindow(QMainWindow, form_class):
             else:
                 QMessageBox.critical(self, "오류", f"파일 생성 실패:\n{error}")
     
+    """폴더에 새 폴더 추가"""
+    def create_folder_in_folder(self, folder_item, folder_path):
+        folder_name, ok = QInputDialog.getText(self, "폴더 추가", "새 폴더 이름을 입력하세요:")
+        
+        if ok and folder_name:
+            new_folder_path = os.path.join(folder_path, folder_name)
+            
+            if os.path.exists(new_folder_path):
+                QMessageBox.warning(self, "오류", "같은 이름의 폴더가 이미 존재합니다.")
+                return
+            
+            success, error = self.file_manager.create_folder(new_folder_path)
+            
+            if success:
+                new_item = QTreeWidgetItem(folder_item)
+                new_item.setText(0, f"📁 {folder_name}")
+                new_item.setData(0, 1, folder_name)
+                folder_item.setExpanded(True)
+                
+                QMessageBox.information(self, "성공", f"폴더가 생성되었습니다:\n{new_folder_path}")
+                print(f"Folder created: {new_folder_path}")
+            else:
+                QMessageBox.critical(self, "오류", f"폴더 생성 실패:\n{error}")
+
     """파일 또는 폴더 삭제"""
     def delete_item(self, item, item_path, is_directory):
         item_type = "폴더" if is_directory else "파일"
@@ -243,6 +269,7 @@ class EditorWindow(QMainWindow, form_class):
         self.terminal_output.insertPlainText(text)
         self.terminal_output.moveCursor(QTextCursor.End)
 
+    """모델 콤보박스 초기화"""
     def _populate_model_combobox(self):
         """ModelManager에 등록된 모델들을 `modelName` 콤보박스에 채웁니다."""
         try:
@@ -261,6 +288,7 @@ class EditorWindow(QMainWindow, form_class):
             # UI에 오류 출력
             self.append_terminal_output(f"모델 목록 로드 실패: {e}\n")
 
+    """모델 콤보박스 선택 변경 핸들러"""
     def _on_model_selected(self, alias: str):
         """콤보박스 선택 변경 시 ModelManager의 기본 모델을 변경합니다."""
         if not alias:
@@ -316,6 +344,7 @@ class EditorWindow(QMainWindow, form_class):
             # 추출 실패 시 안내 유지
             QMessageBox.information(self, "안내", "응답에서 수정된 코드를 추출하지 못했습니다. 우측 응답을 확인해주세요.")
 
+    """마크다운 텍스트를 HTML로 변환"""
     def _format_as_html(self, text: str) -> str:
         """마크다운 텍스트를 HTML로 변환"""
         try:
