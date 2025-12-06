@@ -2,7 +2,7 @@ import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QMenu, QInputDialog, QTreeWidgetItem
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextCursor
+from PyQt5.QtGui import QTextCursor, QIcon
 from src.managers.file_manager import FileManager
 from src.managers.terminal_manager import TerminalManager
 from src.managers.model_manager import ModelManager
@@ -16,6 +16,8 @@ class EditorWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+        self.setWindowIcon(QIcon('./src/resources/icons/appicon.png'))
         
         # Manager 초기화
         self.file_manager = FileManager()
